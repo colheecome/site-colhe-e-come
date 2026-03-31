@@ -6,6 +6,49 @@ const ORIGINS = [
 ];
 const FRETE_GRATIS_KM = 2;
 const FRETE_POR_KM = 3.0;
+const OUTSIDE_AREA_MSG =
+  "Fora da Grande Sao Paulo? Clique aqui e fale conosco para um frete especial";
+const RMSP_CITIES = new Set(
+  [
+    "barueri",
+    "biritiba mirim",
+    "caieiras",
+    "cajamar",
+    "carapicuiba",
+    "cotia",
+    "diadema",
+    "embu das artes",
+    "embu guacu",
+    "ferraz de vasconcelos",
+    "francisco morato",
+    "franco da rocha",
+    "guarulhos",
+    "itapecerica da serra",
+    "itapevi",
+    "itaquaquecetuba",
+    "jandira",
+    "juquitiba",
+    "mairipora",
+    "maua",
+    "mogi das cruzes",
+    "osasco",
+    "pirapora do bom jesus",
+    "poa",
+    "ribeirao pires",
+    "rio grande da serra",
+    "salesopolis",
+    "santa isabel",
+    "santana de parnaiba",
+    "santo andre",
+    "sao bernardo do campo",
+    "sao caetano do sul",
+    "sao lourenco da serra",
+    "sao paulo",
+    "suzano",
+    "taboao da serra",
+    "vargem grande paulista",
+  ].map((item) => item.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))
+);
 
 const PLAN_PRICE_ENV = {
   essencial: {
@@ -49,20 +92,56 @@ function calcFrete(lat, lng) {
 }
 
 async function geocodeCep(cepRaw) {
-  const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${cepRaw}`);
-  if (!response.ok) {
-    throw new Error("CEP invalido ou indisponivel");
+  let city = "";
+  try {
+    const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${cepRaw}`);
+    if (!response.ok) throw new Error("CEP invalido ou indisponivel");
+    const data = await response.json();
+    city = String(data.city || "");
+    if (data.location && data.location.coordinates) {
+      const lat = parseFloat(data.location.coordinates.latitude);
+      const lng = parseFloat(data.location.coordinates.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng, city };
+      }
+    }
+  } catch (err) {
+    // fallback below
   }
-  const data = await response.json();
-  if (!data.location || !data.location.coordinates) {
-    throw new Error("Sem coordenadas para o CEP informado");
+
+  const q = encodeURIComponent(`${cepRaw}, Brasil`);
+  const fallback = await fetch(
+    `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&countrycodes=br&addressdetails=1`,
+    { headers: { "Accept-Language": "pt-BR", "User-Agent": "ColheECome/1.0" } }
+  );
+  if (!fallback.ok) throw new Error("Nao foi possivel localizar o CEP");
+  const geo = await fallback.json();
+  if (!Array.isArray(geo) || !geo.length) {
+    throw new Error("Nao foi possivel localizar o CEP");
   }
-  const lat = parseFloat(data.location.coordinates.latitude);
-  const lng = parseFloat(data.location.coordinates.longitude);
+
+  const lat = parseFloat(geo[0].lat);
+  const lng = parseFloat(geo[0].lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     throw new Error("Coordenadas invalidas para o CEP informado");
   }
-  return { lat, lng };
+  const addr = geo[0].address || {};
+  const fallbackCity = String(
+    city || addr.city || addr.town || addr.municipality || addr.village || ""
+  );
+  return { lat, lng, city: fallbackCity };
+}
+
+function normalizeCity(city) {
+  return String(city || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isRmspCity(city) {
+  return RMSP_CITIES.has(normalizeCity(city));
 }
 
 async function getFreightRecurringPrice(interval, freteCentavos) {
@@ -140,6 +219,13 @@ exports.handler = async (event) => {
     }
 
     const coords = await geocodeCep(cepRaw);
+    if (!isRmspCity(coords.city)) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: OUTSIDE_AREA_MSG, outsideCoverage: true }),
+      };
+    }
     const freteCalc = calcFrete(coords.lat, coords.lng);
     const freteCentavos = Math.round((freteCalc.frete || 0) * 100);
     const interval = normalizedPeriod === "mensal" ? "month" : "week";
