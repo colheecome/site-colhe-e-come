@@ -1482,6 +1482,15 @@ var ORIGINS = [
 ];
 var FRETE_GRATIS_KM = 2;
 var FRETE_POR_KM = 3.00;
+var OUTSIDE_AREA_MSG = 'Fora da Grande São Paulo? Clique aqui e fale conosco para um frete especial';
+var RMSP_CITIES = {
+  'barueri':1,'biritiba mirim':1,'caieiras':1,'cajamar':1,'carapicuiba':1,'cotia':1,'diadema':1,'embu das artes':1,
+  'embu guacu':1,'ferraz de vasconcelos':1,'francisco morato':1,'franco da rocha':1,'guarulhos':1,'itapecerica da serra':1,
+  'itapevi':1,'itaquaquecetuba':1,'jandira':1,'juquitiba':1,'mairipora':1,'maua':1,'mogi das cruzes':1,'osasco':1,
+  'pirapora do bom jesus':1,'poa':1,'ribeirao pires':1,'rio grande da serra':1,'salesopolis':1,'santa isabel':1,
+  'santana de parnaiba':1,'santo andre':1,'sao bernardo do campo':1,'sao caetano do sul':1,'sao lourenco da serra':1,
+  'sao paulo':1,'suzano':1,'taboao da serra':1,'vargem grande paulista':1
+};
 
 var PLAN_PERIOD = 'semanal';
 var SUBSCRIPTION_PLANS = [
@@ -1508,7 +1517,8 @@ var SUBSCRIPTION_PLANS = [
     mensal:441.66
   }
 ];
-var SUBSCRIPTION_FRETE = { cep:'', valor:0, distancia:0 };
+var SUBSCRIPTION_FRETE = { cep:'', valor:0, distancia:0, calculado:false, outside:false };
+var CART_FRETE_STATUS = { calculado:false, outside:false };
 
 // ─── PRODUTOS ────────────────────────────────────────────────────
 /*CC_CATS_START*/var CATEGORIES = [
@@ -1691,6 +1701,7 @@ function openCheckout(){
   if(!cart.length){ showToast('Seu carrinho está vazio.'); return; }
   closeCart();
   checkoutStep=1; freteVal=0; freteCalc=null; selectedHorario='';
+  CART_FRETE_STATUS = { calculado:false, outside:false };
   ['co-nome','co-tel','co-cep','co-bairro','co-endereco','co-numero','co-cidade','co-complemento','co-referencia'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
   });
@@ -1726,7 +1737,14 @@ function goStep(n){
     var num=document.getElementById('co-numero').value.trim();
     var bairro=document.getElementById('co-bairro').value.trim();
     if(!end||!num||!bairro){ showToast('Preencha o endereço completo.'); return; }
-    if(!freteCalc){ showToast('Busque o CEP para calcular o frete antes de continuar.'); return; }
+    if(!freteCalc || !CART_FRETE_STATUS.calculado){
+      if(CART_FRETE_STATUS.outside){
+        showToast('Fora da Grande Sao Paulo? Clique no link para frete especial via WhatsApp.');
+      } else {
+        showToast('Busque o CEP para calcular o frete antes de continuar.');
+      }
+      return;
+    }
     buildResumo();
   }
   checkoutStep=n;
@@ -1863,6 +1881,59 @@ function calcFrete(lat,lng){
   return best;
 }
 
+function normalizeCity(city){
+  return String(city||'')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .trim();
+}
+
+function isRmspCity(city){
+  return !!RMSP_CITIES[normalizeCity(city)];
+}
+
+function getFreteEspecialCtaHtml(){
+  var wpp = getAdmConfig().wpp || '5511992812798';
+  return OUTSIDE_AREA_MSG+' <a href="https://wa.me/'+wpp+'" target="_blank" rel="noopener">Falar no WhatsApp</a>.';
+}
+
+function geocodeCepWithFallback(cepRaw){
+  var result = { city:'', state:'', street:'', neighborhood:'', lat:null, lng:null };
+  return fetch('https://brasilapi.com.br/api/cep/v2/'+cepRaw)
+    .then(function(r){
+      if(!r.ok) throw new Error('cep_nao_encontrado');
+      return r.json();
+    })
+    .then(function(data){
+      result.city = data.city || '';
+      result.state = data.state || '';
+      result.street = data.street || '';
+      result.neighborhood = data.neighborhood || '';
+      if(data.location && data.location.coordinates){
+        result.lat = parseFloat(data.location.coordinates.latitude);
+        result.lng = parseFloat(data.location.coordinates.longitude);
+      }
+      if(Number.isFinite(result.lat) && Number.isFinite(result.lng)) return result;
+      var q = encodeURIComponent(cepRaw + ', Brasil');
+      return fetch('https://nominatim.openstreetmap.org/search?q='+q+'&format=json&limit=1&countrycodes=br&addressdetails=1',
+        { headers:{'Accept-Language':'pt-BR','User-Agent':'ColheECome/1.0'} })
+        .then(function(resp){
+          if(!resp.ok) throw new Error('geo_fallback');
+          return resp.json();
+        })
+        .then(function(geo){
+          if(!geo.length) throw new Error('geo_fallback');
+          result.lat = parseFloat(geo[0].lat);
+          result.lng = parseFloat(geo[0].lon);
+          var addr = geo[0].address || {};
+          if(!result.city) result.city = addr.city || addr.town || addr.municipality || addr.village || '';
+          if(!result.state) result.state = addr.state || '';
+          return result;
+        });
+    });
+}
+
 function buscarCep(){
   var cepRaw=document.getElementById('co-cep').value.replace(/\D/g,'');
   if(cepRaw.length!==8){ showToast('Digite um CEP válido com 8 dígitos.'); return; }
@@ -1870,49 +1941,21 @@ function buscarCep(){
   btn.textContent='Buscando...'; btn.classList.add('loading');
   hideFrete();
 
-  // BrasilAPI v2 — retorna endereço + coordenadas GPS direto pelo CEP
-  fetch('https://brasilapi.com.br/api/cep/v2/'+cepRaw)
-    .then(function(r){
-      if(!r.ok) throw new Error('cep_nao_encontrado');
-      return r.json();
-    })
+  geocodeCepWithFallback(cepRaw)
     .then(function(data){
       btn.textContent='Buscar'; btn.classList.remove('loading');
-
-      // preencher campos de endereço
       document.getElementById('co-endereco').value = data.street || '';
       document.getElementById('co-bairro').value   = data.neighborhood || '';
       document.getElementById('co-cidade').value   = (data.city||'') + ' / ' + (data.state||'');
-
-      // BrasilAPI v2 retorna data.location.coordinates.latitude/longitude
-      var lat = null, lng = null;
-      if(data.location && data.location.coordinates){
-        lat = parseFloat(data.location.coordinates.latitude);
-        lng = parseFloat(data.location.coordinates.longitude);
+      if(!isRmspCity(data.city)){
+        showFreteOutsideArea();
+        return;
       }
-
-      if(lat && lng && !isNaN(lat) && !isNaN(lng)){
-        // coordenadas disponíveis — calcular frete direto
-        aplicarFrete(lat, lng);
-      } else {
-        // sem coordenadas na BrasilAPI — tentar Nominatim só com o CEP
-        var q = encodeURIComponent(cepRaw + ', Brasil');
-        return fetch('https://nominatim.openstreetmap.org/search?q='+q+'&format=json&limit=1&countrycodes=br',
-          { headers:{'Accept-Language':'pt-BR','User-Agent':'ColheECome/1.0'} });
+      if(Number.isFinite(data.lat) && Number.isFinite(data.lng)){
+        aplicarFrete(data.lat, data.lng);
+        return;
       }
-    })
-    .then(function(r){
-      // só chega aqui se Nominatim foi chamado (r é Response)
-      if(!r || !r.json) return;
-      return r.json();
-    })
-    .then(function(geo){
-      if(!geo) return; // já resolvido via BrasilAPI
-      if(geo.length){
-        aplicarFrete(parseFloat(geo[0].lat), parseFloat(geo[0].lon));
-      } else {
-        showFreteFallback();
-      }
+      showFreteFallback();
     })
     .catch(function(e){
       btn.textContent='Buscar'; btn.classList.remove('loading');
@@ -1928,6 +1971,7 @@ function aplicarFrete(lat, lng){
   var result = calcFrete(lat, lng);
   freteCalc = result;
   freteVal  = result.frete;
+  CART_FRETE_STATUS = { calculado:true, outside:false };
   showFreteResult(result);
   // atualizar totais no carrinho
   var sub = cartSubtotal();
@@ -1955,11 +1999,25 @@ function showFreteFallback(){
   box.className='frete-box show erro';
   document.getElementById('frete-label').textContent='Frete a calcular';
   document.getElementById('frete-val').textContent='Sob consulta';
-  document.getElementById('frete-desc').textContent='Não conseguimos calcular automaticamente. Nosso time confirmará o frete pelo WhatsApp.';
-  freteVal=0; freteCalc={dist:0,frete:0};
+  document.getElementById('frete-desc').innerHTML='Nao foi possivel calcular automaticamente. Tente novamente.';
+  freteVal=0; freteCalc=null;
+  CART_FRETE_STATUS = { calculado:false, outside:false };
 }
 
-function hideFrete(){ document.getElementById('frete-box').className='frete-box'; }
+function showFreteOutsideArea(){
+  var box=document.getElementById('frete-box');
+  box.className='frete-box show erro';
+  document.getElementById('frete-label').textContent='Frete especial';
+  document.getElementById('frete-val').textContent='Fora da area';
+  document.getElementById('frete-desc').innerHTML=getFreteEspecialCtaHtml();
+  freteVal=0; freteCalc=null;
+  CART_FRETE_STATUS = { calculado:false, outside:true };
+}
+
+function hideFrete(){
+  document.getElementById('frete-box').className='frete-box';
+  CART_FRETE_STATUS = { calculado:false, outside:false };
+}
 
 function setPlanPeriod(period){
   PLAN_PERIOD = period === 'mensal' ? 'mensal' : 'semanal';
@@ -1971,9 +2029,12 @@ function setPlanPeriod(period){
 function renderSubscriptionPlans(){
   var el = document.getElementById('plans-grid');
   if(!el) return;
-  var freteTxt = SUBSCRIPTION_FRETE.cep
-    ? ('Frete estimado: ' + (SUBSCRIPTION_FRETE.valor===0 ? 'Gratis' : ('R$ ' + SUBSCRIPTION_FRETE.valor.toFixed(2).replace('.',','))) + ' · ' + SUBSCRIPTION_FRETE.distancia.toFixed(1).replace('.',',') + ' km')
-    : 'Informe o CEP para simular o frete da assinatura.';
+  var freteTxt = 'Informe o CEP para simular o frete da assinatura.';
+  if(SUBSCRIPTION_FRETE.outside){
+    freteTxt = getFreteEspecialCtaHtml();
+  } else if(SUBSCRIPTION_FRETE.calculado){
+    freteTxt = 'Frete estimado: ' + (SUBSCRIPTION_FRETE.valor===0 ? 'Gratis' : ('R$ ' + SUBSCRIPTION_FRETE.valor.toFixed(2).replace('.',','))) + ' · ' + SUBSCRIPTION_FRETE.distancia.toFixed(1).replace('.',',') + ' km';
+  }
 
   el.innerHTML = SUBSCRIPTION_PLANS.map(function(plan){
     var price = PLAN_PERIOD === 'mensal' ? plan.mensal : plan.semanal;
@@ -2008,21 +2069,21 @@ function calcSubscriptionFrete(planId){
   }
   status.classList.remove('error');
   status.textContent = 'Calculando frete...';
-  fetch('https://brasilapi.com.br/api/cep/v2/'+cepRaw)
-    .then(function(r){
-      if(!r.ok) throw new Error('cep');
-      return r.json();
-    })
+  geocodeCepWithFallback(cepRaw)
     .then(function(data){
-      if(!(data.location && data.location.coordinates)) throw new Error('coord');
-      var lat=parseFloat(data.location.coordinates.latitude);
-      var lng=parseFloat(data.location.coordinates.longitude);
-      if(!Number.isFinite(lat)||!Number.isFinite(lng)) throw new Error('coord');
-      var result = calcFrete(lat,lng);
-      SUBSCRIPTION_FRETE = { cep:cepRaw, valor:result.frete, distancia:result.dist };
+      if(!isRmspCity(data.city)){
+        status.classList.add('error');
+        status.innerHTML = getFreteEspecialCtaHtml();
+        SUBSCRIPTION_FRETE = { cep:cepRaw, valor:0, distancia:0, calculado:false, outside:true };
+        return;
+      }
+      if(!Number.isFinite(data.lat)||!Number.isFinite(data.lng)) throw new Error('coord');
+      var result = calcFrete(data.lat,data.lng);
+      SUBSCRIPTION_FRETE = { cep:cepRaw, valor:result.frete, distancia:result.dist, calculado:true, outside:false };
       renderSubscriptionPlans();
     })
     .catch(function(){
+      SUBSCRIPTION_FRETE = { cep:cepRaw, valor:0, distancia:0, calculado:false, outside:false };
       status.classList.add('error');
       status.textContent = 'Nao foi possivel calcular agora. Tente novamente em instantes.';
     });
@@ -2032,6 +2093,14 @@ async function startSubscriptionCheckout(planId){
   var input = document.getElementById('plan-cep-' + planId);
   var cepRaw = input ? input.value.replace(/\D/g,'') : '';
   if(cepRaw.length!==8){ showToast('Informe um CEP valido para assinatura.'); return; }
+  if(SUBSCRIPTION_FRETE.cep!==cepRaw || !SUBSCRIPTION_FRETE.calculado){
+    if(SUBSCRIPTION_FRETE.outside){
+      showToast('Fora da Grande Sao Paulo? Clique no link para frete especial via WhatsApp.');
+    } else {
+      showToast('Calcule o frete antes de assinar.');
+    }
+    return;
+  }
 
   var payload = {
     planId: planId,
@@ -2659,6 +2728,14 @@ async function exportarSiteAtualizado(){
 
 async function finalizarStripe(){
   if(!cart.length){ showToast('Seu carrinho está vazio.'); return; }
+  if(!freteCalc || !CART_FRETE_STATUS.calculado){
+    if(CART_FRETE_STATUS.outside){
+      showToast('Fora da Grande Sao Paulo? Clique no link para frete especial via WhatsApp.');
+    } else {
+      showToast('Calcule o frete antes de finalizar.');
+    }
+    return;
+  }
 
   var nome    = document.getElementById('co-nome').value.trim();
   var tel     = document.getElementById('co-tel').value.trim();
