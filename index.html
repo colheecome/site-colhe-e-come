@@ -566,6 +566,9 @@ textarea.adm-field{resize:vertical;min-height:72px}
 .plans-frete .co-field{background:#fff}
 .plan-frete-status{font-size:12px;line-height:1.5;color:#5F7567;margin-bottom:18px;min-height:38px}
 .plan-frete-status.error{color:#B84A4A}
+.frete-special-msg{margin-bottom:10px}
+.frete-special-btn{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border-radius:2px;background:#1C3829;color:#F5EFE0;font-size:10px;font-weight:500;letter-spacing:.12em;text-transform:uppercase}
+.frete-special-btn:hover{background:#2E4F3E}
 .plan-btn{margin-top:auto;padding:12px;background:#1C3829;color:#F5EFE0;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;border-radius:2px;transition:var(--t)}
 .plan-btn:hover{background:#2E4F3E}
 
@@ -1483,14 +1486,6 @@ var ORIGINS = [
 var FRETE_GRATIS_KM = 2;
 var FRETE_POR_KM = 3.00;
 var OUTSIDE_AREA_MSG = 'Fora da Grande São Paulo? Clique aqui e fale conosco para um frete especial';
-var RMSP_CITIES = {
-  'barueri':1,'biritiba mirim':1,'caieiras':1,'cajamar':1,'carapicuiba':1,'cotia':1,'diadema':1,'embu das artes':1,
-  'embu guacu':1,'ferraz de vasconcelos':1,'francisco morato':1,'franco da rocha':1,'guarulhos':1,'itapecerica da serra':1,
-  'itapevi':1,'itaquaquecetuba':1,'jandira':1,'juquitiba':1,'mairipora':1,'maua':1,'mogi das cruzes':1,'osasco':1,
-  'pirapora do bom jesus':1,'poa':1,'ribeirao pires':1,'rio grande da serra':1,'salesopolis':1,'santa isabel':1,
-  'santana de parnaiba':1,'santo andre':1,'sao bernardo do campo':1,'sao caetano do sul':1,'sao lourenco da serra':1,
-  'sao paulo':1,'suzano':1,'taboao da serra':1,'vargem grande paulista':1
-};
 
 var PLAN_PERIOD = 'semanal';
 var SUBSCRIPTION_PLANS = [
@@ -1881,56 +1876,24 @@ function calcFrete(lat,lng){
   return best;
 }
 
-function normalizeCity(city){
-  return String(city||'')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g,'')
-    .toLowerCase()
-    .trim();
-}
-
-function isRmspCity(city){
-  return !!RMSP_CITIES[normalizeCity(city)];
-}
-
-function getFreteEspecialCtaHtml(){
+function getFreteEspecialCtaBlockHtml(){
   var wpp = getAdmConfig().wpp || '5511992812798';
-  return OUTSIDE_AREA_MSG+' <a href="https://wa.me/'+wpp+'" target="_blank" rel="noopener">Falar no WhatsApp</a>.';
+  return ''+
+    '<div class="frete-special-msg">'+OUTSIDE_AREA_MSG+'</div>'+
+    '<a class="frete-special-btn" href="https://wa.me/'+wpp+'" target="_blank" rel="noopener">Falar no WhatsApp</a>';
 }
 
-function geocodeCepWithFallback(cepRaw){
-  var result = { city:'', state:'', street:'', neighborhood:'', lat:null, lng:null };
-  return fetch('https://brasilapi.com.br/api/cep/v2/'+cepRaw)
+function calculateFreightByCep(cepRaw){
+  return fetch('/.netlify/functions/calculate-freight',{
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ cep: cepRaw })
+  })
     .then(function(r){
-      if(!r.ok) throw new Error('cep_nao_encontrado');
-      return r.json();
-    })
-    .then(function(data){
-      result.city = data.city || '';
-      result.state = data.state || '';
-      result.street = data.street || '';
-      result.neighborhood = data.neighborhood || '';
-      if(data.location && data.location.coordinates){
-        result.lat = parseFloat(data.location.coordinates.latitude);
-        result.lng = parseFloat(data.location.coordinates.longitude);
-      }
-      if(Number.isFinite(result.lat) && Number.isFinite(result.lng)) return result;
-      var q = encodeURIComponent(cepRaw + ', Brasil');
-      return fetch('https://nominatim.openstreetmap.org/search?q='+q+'&format=json&limit=1&countrycodes=br&addressdetails=1',
-        { headers:{'Accept-Language':'pt-BR','User-Agent':'ColheECome/1.0'} })
-        .then(function(resp){
-          if(!resp.ok) throw new Error('geo_fallback');
-          return resp.json();
-        })
-        .then(function(geo){
-          if(!geo.length) throw new Error('geo_fallback');
-          result.lat = parseFloat(geo[0].lat);
-          result.lng = parseFloat(geo[0].lon);
-          var addr = geo[0].address || {};
-          if(!result.city) result.city = addr.city || addr.town || addr.municipality || addr.village || '';
-          if(!result.state) result.state = addr.state || '';
-          return result;
-        });
+      return r.json().then(function(data){
+        if(!r.ok) throw new Error(data.error || 'frete');
+        return data;
+      });
     });
 }
 
@@ -1941,18 +1904,18 @@ function buscarCep(){
   btn.textContent='Buscando...'; btn.classList.add('loading');
   hideFrete();
 
-  geocodeCepWithFallback(cepRaw)
+  calculateFreightByCep(cepRaw)
     .then(function(data){
       btn.textContent='Buscar'; btn.classList.remove('loading');
       document.getElementById('co-endereco').value = data.street || '';
       document.getElementById('co-bairro').value   = data.neighborhood || '';
       document.getElementById('co-cidade').value   = (data.city||'') + ' / ' + (data.state||'');
-      if(!isRmspCity(data.city)){
+      if(data.outsideCoverage){
         showFreteOutsideArea();
         return;
       }
-      if(Number.isFinite(data.lat) && Number.isFinite(data.lng)){
-        aplicarFrete(data.lat, data.lng);
+      if(typeof data.frete === 'number' && typeof data.distanciaKm === 'number'){
+        aplicarFreteCalculado(data.frete, data.distanciaKm);
         return;
       }
       showFreteFallback();
@@ -1967,12 +1930,11 @@ function buscarCep(){
     });
 }
 
-function aplicarFrete(lat, lng){
-  var result = calcFrete(lat, lng);
-  freteCalc = result;
-  freteVal  = result.frete;
+function aplicarFreteCalculado(frete, distanciaKm){
+  freteCalc = { frete:frete, dist:distanciaKm };
+  freteVal  = frete;
   CART_FRETE_STATUS = { calculado:true, outside:false };
-  showFreteResult(result);
+  showFreteResult(freteCalc);
   // atualizar totais no carrinho
   var sub = cartSubtotal();
   var freteRow = document.getElementById('cart-frete-row');
@@ -2009,7 +1971,7 @@ function showFreteOutsideArea(){
   box.className='frete-box show erro';
   document.getElementById('frete-label').textContent='Frete especial';
   document.getElementById('frete-val').textContent='Fora da area';
-  document.getElementById('frete-desc').innerHTML=getFreteEspecialCtaHtml();
+  document.getElementById('frete-desc').innerHTML=getFreteEspecialCtaBlockHtml();
   freteVal=0; freteCalc=null;
   CART_FRETE_STATUS = { calculado:false, outside:true };
 }
@@ -2031,7 +1993,7 @@ function renderSubscriptionPlans(){
   if(!el) return;
   var freteTxt = 'Informe o CEP para simular o frete da assinatura.';
   if(SUBSCRIPTION_FRETE.outside){
-    freteTxt = getFreteEspecialCtaHtml();
+    freteTxt = getFreteEspecialCtaBlockHtml();
   } else if(SUBSCRIPTION_FRETE.calculado){
     freteTxt = 'Frete estimado: ' + (SUBSCRIPTION_FRETE.valor===0 ? 'Gratis' : ('R$ ' + SUBSCRIPTION_FRETE.valor.toFixed(2).replace('.',','))) + ' · ' + SUBSCRIPTION_FRETE.distancia.toFixed(1).replace('.',',') + ' km';
   }
@@ -2051,7 +2013,7 @@ function renderSubscriptionPlans(){
         '<input class="co-field" id="plan-cep-'+plan.id+'" placeholder="CEP para frete (00000-000)" value="'+(SUBSCRIPTION_FRETE.cep||'')+'" oninput="maskCep(this)">'+
         '<button class="btn-cep" onclick="calcSubscriptionFrete(\''+plan.id+'\')">Calcular</button>'+
       '</div>'+
-      '<p class="plan-frete-status" id="plan-frete-status-'+plan.id+'">'+freteTxt+'</p>'+
+      '<div class="plan-frete-status" id="plan-frete-status-'+plan.id+'">'+freteTxt+'</div>'+
       '<button class="plan-btn" onclick="startSubscriptionCheckout(\''+plan.id+'\')">Assinar agora</button>'+
     '</div>';
   }).join('');
@@ -2069,17 +2031,16 @@ function calcSubscriptionFrete(planId){
   }
   status.classList.remove('error');
   status.textContent = 'Calculando frete...';
-  geocodeCepWithFallback(cepRaw)
+  calculateFreightByCep(cepRaw)
     .then(function(data){
-      if(!isRmspCity(data.city)){
+      if(data.outsideCoverage){
         status.classList.add('error');
-        status.innerHTML = getFreteEspecialCtaHtml();
+        status.innerHTML = getFreteEspecialCtaBlockHtml();
         SUBSCRIPTION_FRETE = { cep:cepRaw, valor:0, distancia:0, calculado:false, outside:true };
         return;
       }
-      if(!Number.isFinite(data.lat)||!Number.isFinite(data.lng)) throw new Error('coord');
-      var result = calcFrete(data.lat,data.lng);
-      SUBSCRIPTION_FRETE = { cep:cepRaw, valor:result.frete, distancia:result.dist, calculado:true, outside:false };
+      if(typeof data.frete !== 'number' || typeof data.distanciaKm !== 'number') throw new Error('coord');
+      SUBSCRIPTION_FRETE = { cep:cepRaw, valor:data.frete, distancia:data.distanciaKm, calculado:true, outside:false };
       renderSubscriptionPlans();
     })
     .catch(function(){
