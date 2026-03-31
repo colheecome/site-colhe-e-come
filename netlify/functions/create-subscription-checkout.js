@@ -1,0 +1,209 @@
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
+const ORIGINS = [
+  { lat: -23.6072, lng: -46.7108 },
+  { lat: -23.5649, lng: -46.6365 },
+];
+const FRETE_GRATIS_KM = 2;
+const FRETE_POR_KM = 3.0;
+
+const PLAN_PRICE_ENV = {
+  essencial: {
+    semanal: "STRIPE_PRICE_PLAN_ESSENCIAL_WEEKLY",
+    mensal: "STRIPE_PRICE_PLAN_ESSENCIAL_MONTHLY",
+  },
+  rotina: {
+    semanal: "STRIPE_PRICE_PLAN_ROTINA_WEEKLY",
+    mensal: "STRIPE_PRICE_PLAN_ROTINA_MONTHLY",
+  },
+  familia: {
+    semanal: "STRIPE_PRICE_PLAN_FAMILIA_WEEKLY",
+    mensal: "STRIPE_PRICE_PLAN_FAMILIA_MONTHLY",
+  },
+};
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function calcFrete(lat, lng) {
+  let best = null;
+  ORIGINS.forEach((o) => {
+    const dist = haversine(o.lat, o.lng, lat, lng);
+    const frete =
+      dist <= FRETE_GRATIS_KM
+        ? 0
+        : Math.ceil((dist - FRETE_GRATIS_KM) * FRETE_POR_KM * 10) / 10;
+    if (!best || frete < best.frete) best = { dist, frete };
+  });
+  return best;
+}
+
+async function geocodeCep(cepRaw) {
+  const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${cepRaw}`);
+  if (!response.ok) {
+    throw new Error("CEP invalido ou indisponivel");
+  }
+  const data = await response.json();
+  if (!data.location || !data.location.coordinates) {
+    throw new Error("Sem coordenadas para o CEP informado");
+  }
+  const lat = parseFloat(data.location.coordinates.latitude);
+  const lng = parseFloat(data.location.coordinates.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    throw new Error("Coordenadas invalidas para o CEP informado");
+  }
+  return { lat, lng };
+}
+
+async function getFreightRecurringPrice(interval, freteCentavos) {
+  if (!freteCentavos || freteCentavos <= 0) {
+    return null;
+  }
+
+  const created = await stripe.prices.create({
+    currency: "brl",
+    unit_amount: freteCentavos,
+    recurring: { interval },
+    product_data: {
+      name: "Frete recorrente",
+      metadata: {
+        kind: "subscription_shipping",
+      },
+    },
+    metadata: {
+      kind: "subscription_shipping",
+      interval,
+      amount_cents: String(freteCentavos),
+    },
+  });
+  return created.id;
+}
+
+exports.handler = async (event) => {
+  const headers = { "Content-Type": "application/json" };
+
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: "Metodo nao permitido" }),
+    };
+  }
+
+  try {
+    const reqBody = JSON.parse(event.body || "{}");
+    const { planId, periodicidade, cep, customerInfo } = reqBody;
+    const normalizedPlan = String(planId || "").trim();
+    const normalizedPeriod = String(periodicidade || "").trim();
+    const cepRaw = String(cep || "").replace(/\D/g, "");
+
+    if (!PLAN_PRICE_ENV[normalizedPlan]) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: "Plano invalido" }),
+      };
+    }
+    if (!["semanal", "mensal"].includes(normalizedPeriod)) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: "Periodicidade invalida" }),
+      };
+    }
+    if (cepRaw.length !== 8) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: "CEP invalido" }),
+      };
+    }
+
+    const envKey = PLAN_PRICE_ENV[normalizedPlan][normalizedPeriod];
+    const planPriceId = process.env[envKey];
+    if (!planPriceId) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: `Price ID ausente: ${envKey}` }),
+      };
+    }
+
+    const coords = await geocodeCep(cepRaw);
+    const freteCalc = calcFrete(coords.lat, coords.lng);
+    const freteCentavos = Math.round((freteCalc.frete || 0) * 100);
+    const interval = normalizedPeriod === "mensal" ? "month" : "week";
+
+    const lineItems = [{ price: planPriceId, quantity: 1 }];
+    const freightPriceId = await getFreightRecurringPrice(interval, freteCentavos);
+    if (freightPriceId) {
+      lineItems.push({ price: freightPriceId, quantity: 1 });
+    }
+
+    const baseUrl = process.env.SITE_URL;
+    if (!baseUrl) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: "SITE_URL nao configurada" }),
+      };
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: lineItems,
+      success_url: `${baseUrl}/sucesso?tipo=assinatura&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/?assinatura=cancelada`,
+      locale: "pt-BR",
+      customer_email:
+        customerInfo && customerInfo.email ? String(customerInfo.email) : undefined,
+      metadata: {
+        order_type: "subscription",
+        plan_id: normalizedPlan,
+        periodicidade: normalizedPeriod,
+        cep: cepRaw,
+        distancia_km: freteCalc.dist.toFixed(2),
+        frete_centavos: String(freteCentavos),
+      },
+      subscription_data: {
+        metadata: {
+          plan_id: normalizedPlan,
+          periodicidade: normalizedPeriod,
+          cep: cepRaw,
+          distancia_km: freteCalc.dist.toFixed(2),
+          frete_centavos: String(freteCentavos),
+        },
+      },
+    });
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        url: session.url,
+        sessionId: session.id,
+        frete: Number(freteCalc.frete.toFixed(2)),
+        distanciaKm: Number(freteCalc.dist.toFixed(2)),
+      }),
+    };
+  } catch (err) {
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({
+        error: err.message || "Nao foi possivel iniciar a assinatura",
+      }),
+    };
+  }
+};

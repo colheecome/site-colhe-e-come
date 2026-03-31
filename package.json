@@ -1,0 +1,8 @@
+{
+  "name": "colhe-e-come",
+  "version": "1.0.0",
+  "description": "Colhe & Come — Site e funções Netlify",
+  "dependencies": {
+    "stripe": "^14.0.0"
+  }
+}
