@@ -7,7 +7,7 @@ const ORIGINS = [
 const FRETE_GRATIS_KM = 2;
 const FRETE_POR_KM = 3.0;
 const OUTSIDE_AREA_MSG =
-  "Fora da Grande Sao Paulo? Clique aqui e fale conosco para um frete especial";
+  "Fora da Grande São Paulo? Clique aqui e fale conosco para um frete especial";
 const RMSP_CITIES = new Set(
   [
     "barueri",
