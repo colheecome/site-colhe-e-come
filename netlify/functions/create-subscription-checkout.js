@@ -1,8 +1,8 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const ORIGINS = [
-  { lat: -23.6072, lng: -46.7108 },
-  { lat: -23.5649, lng: -46.6365 },
+  { lat: -23.6243, lng: -46.7450 }, // Vila Suzana (Rua Domingos Ataíde)
+  { lat: -23.5649, lng: -46.6365 }, // Aclimação
 ];
 const FRETE_GRATIS_KM = 2;
 const FRETE_POR_KM = 3.0;
