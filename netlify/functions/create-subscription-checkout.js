@@ -93,31 +93,41 @@ function calcFrete(lat, lng) {
 
 async function geocodeCep(cepRaw) {
   let city = "";
+  let street = "";
   try {
     const response = await fetch(`https://brasilapi.com.br/api/cep/v2/${cepRaw}`);
-    if (!response.ok) throw new Error("CEP invalido ou indisponivel");
-    const data = await response.json();
-    city = String(data.city || "");
-    if (data.location && data.location.coordinates) {
-      const lat = parseFloat(data.location.coordinates.latitude);
-      const lng = parseFloat(data.location.coordinates.longitude);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        return { lat, lng, city };
+    if (response.ok) {
+      const data = await response.json();
+      city = String(data.city || "");
+      street = String(data.street || "");
+      if (data.location && data.location.coordinates) {
+        const lat = parseFloat(data.location.coordinates.latitude);
+        const lng = parseFloat(data.location.coordinates.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          return { lat, lng, city };
+        }
       }
     }
   } catch (err) {
-    // fallback below
+    // continue to fallback
   }
 
-  const q = encodeURIComponent(`${cepRaw}, Brasil`);
-  const fallback = await fetch(
-    `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&countrycodes=br&addressdetails=1`,
-    { headers: { "Accept-Language": "pt-BR", "User-Agent": "ColheECome/1.0" } }
-  );
-  if (!fallback.ok) throw new Error("Nao foi possivel localizar o CEP");
-  const geo = await fallback.json();
-  if (!Array.isArray(geo) || !geo.length) {
-    throw new Error("Nao foi possivel localizar o CEP");
+  const searchNominatim = async (query) => {
+    try {
+      const resp = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=br&addressdetails=1`,
+        { headers: { "Accept-Language": "pt-BR", "User-Agent": "ColheECome/1.0" } }
+      );
+      return resp.ok ? await resp.json() : [];
+    } catch (e) { return []; }
+  };
+
+  let geo = await searchNominatim(`${cepRaw}, Brasil`);
+  if ((!geo || !geo.length) && street && city) {
+    geo = await searchNominatim(`${street}, ${city}, Brasil`);
+  }
+
+  if (!geo || !geo.length) {
+    throw new Error("Nao foi possivel localizar as coordenadas para o CEP informado");
   }
 
   const lat = parseFloat(geo[0].lat);
