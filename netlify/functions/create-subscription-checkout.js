@@ -227,8 +227,10 @@ exports.handler = async (event) => {
       };
     }
     const freteCalc = calcFrete(coords.lat, coords.lng);
-    const freteCentavos = Math.round((freteCalc.frete || 0) * 100);
-    const interval = normalizedPeriod === "mensal" ? "month" : "week";
+    const isMensal = normalizedPeriod === "mensal";
+    const deliveriesCount = isMensal ? 4 : 1;
+    const freteCentavos = Math.round((freteCalc.frete || 0) * deliveriesCount * 100);
+    const interval = isMensal ? "month" : "week";
 
     const lineItems = [{ price: planPriceId, quantity: 1 }];
     const freightPriceId = await getFreightRecurringPrice(interval, freteCentavos);
