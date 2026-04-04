@@ -259,7 +259,7 @@ exports.handler = async (event) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      automatic_payment_methods: { enabled: true },
+      payment_method_types: ["card"],
       line_items: lineItems,
       success_url: `${baseUrl}/sucesso?tipo=assinatura&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/?assinatura=cancelada`,
