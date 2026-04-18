@@ -1,0 +1,9 @@
+<svg width="560" height="80" viewBox="0 0 560 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs><style>@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap');</style></defs>
+  <rect width="560" height="80" fill="#1C3829"/>
+  <circle cx="40" cy="40" r="38.5" stroke="#7AAB87" stroke-width="1"/>
+  <path d="M40 58 C40 58 26 47 26 35 C26 26.5 32.3 20 40 20 C47.7 20 54 26.5 54 35 C54 47 40 58 40 58Z" fill="none" stroke="#7AAB87" stroke-width="1.5"/>
+  <path d="M40 20 L40 58" stroke="#7AAB87" stroke-width="1" opacity="0.45"/>
+  <path d="M40 40 C40 40 47 35 47 27" stroke="#7AAB87" stroke-width="1" stroke-linecap="round" opacity="0.45"/>
+  <text x="92" y="52" font-family="'Cormorant Garamond', Georgia, serif" font-size="48" font-weight="300" fill="#F5EFE0">Colhe <tspan font-style="italic" fill="#7AAB87">&amp;</tspan> Come</text>
+</svg>

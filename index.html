@@ -3,8 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Colhe & Come — Orgânicos Prontos</title>
-<meta name="description" content="Alimentos orgânicos, cortados e higienizados. Praticidade no seu dia a dia.">
+<title>Colhe & Come — Alimentos Orgânicos Prontos, Cortados e Higienizados</title>
+<meta name="description" content="Compre alimentos orgânicos frescos, já cortados e higienizados. Praticidade e saúde com entrega em até 48h na Grande São Paulo. Conheça nossos planos de assinatura!">
+<meta name="keywords" content="orgânicos prontos, alimentos higienizados, comida saudável, entrega de orgânicos, assinatura de orgânicos, legumes cortados, praticidade na cozinha">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://colhecome.netlify.app/">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg width='120' height='120' viewBox='0 0 44 44' fill='none' xmlns='http://www.w3.org/2000/svg'><circle cx='22' cy='22' r='21.5' stroke='%233D6B4F' stroke-width='0.6'/><path d='M22 32 C22 32 14 26 14 19 C14 14.58 17.58 11 22 11 C26.42 11 30 14.58 30 19 C30 26 22 32 22 32Z' fill='none' stroke='%233D6B4F' stroke-width='0.9'/><path d='M22 11 L22 32' stroke='%237AAB87' stroke-width='0.6'/><path d='M22 22 C22 22 26 19 26 15' stroke='%237AAB87' stroke-width='0.6' stroke-linecap='round'/></svg>">
+
+<!-- Open Graph (Facebook/Instagram/WhatsApp) -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://colhecome.netlify.app/">
+<meta property="og:title" content="Colhe & Come — Orgânicos Prontos para o seu Dia">
+<meta property="og:description" content="Alimentos orgânicos certificados, cortados e prontos para cozinhar. Praticidade que respeita a natureza.">
+<meta property="og:image" content="https://colhecome.netlify.app/assets/logo-horizontal-escuro.svg">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="https://colhecome.netlify.app/">
+<meta property="twitter:title" content="Colhe & Come — Orgânicos Prontos">
+<meta property="twitter:description" content="Alimentos orgânicos certificados, cortados e prontos para cozinhar.">
+<meta property="twitter:image" content="https://colhecome.netlify.app/assets/logo-horizontal-escuro.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -815,7 +833,7 @@ textarea.adm-field{resize:vertical;min-height:72px}
   <div class="plans-inner">
     <div class="plans-header">
       <h2 class="plans-title">Assinatura com saúde no modo automático</h2>
-      <p class="plans-sub">Escolha seu plano, calcule o frete transparente pelo seu CEP e ative sua recorrencia com checkout Stripe.</p>
+      <p class="plans-sub">Escolha seu plano, calcule o frete transparente pelo seu CEP e ative sua recorrencia com checkout Mercado Pago.</p>
     </div>
 
     <div class="plans-toggle">
@@ -1033,7 +1051,7 @@ textarea.adm-field{resize:vertical;min-height:72px}
         <div class="co-nav">
           <button class="btn-co-back" onclick="goStep(2)">← Voltar</button>
           <div style="display:flex;flex-direction:column;gap:10px;flex:1">
-            <button class="btn-co-next" id="btn-stripe-checkout" onclick="finalizarStripe()" style="display:flex;align-items:center;justify-content:center;gap:10px">
+            <button class="btn-co-next" id="btn-mercadopago-checkout" onclick="finalizarMercado Pago()" style="display:flex;align-items:center;justify-content:center;gap:10px">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
               Finalizar pagamento
             </button>
@@ -1076,7 +1094,7 @@ textarea.adm-field{resize:vertical;min-height:72px}
         <button class="adm-tab" onclick="showAdmTab('tab-produtos')">Produtos</button>
         <button class="adm-tab" onclick="showAdmTab('tab-site')">Site</button>
         <button class="adm-tab" onclick="showAdmTab('tab-crm')">CRM &amp; Integrações</button>
-        <button class="adm-tab" onclick="showAdmTab('tab-stripe')">Stripe</button>
+        <button class="adm-tab" onclick="showAdmTab('tab-mercadopago')">Mercado Pago</button>
       </div>
 
       <!-- PEDIDOS -->
@@ -1084,7 +1102,7 @@ textarea.adm-field{resize:vertical;min-height:72px}
         <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:24px">
           <div>
             <h2 class="adm-section-title">Pedidos</h2>
-            <p class="adm-section-sub">Gerencie todos os pedidos recebidos via WhatsApp e Stripe.</p>
+            <p class="adm-section-sub">Gerencie todos os pedidos recebidos via WhatsApp e Mercado Pago.</p>
           </div>
           <button class="adm-save-block" style="margin-top:0" onclick="clearAllOrders()">Limpar todos</button>
         </div>
@@ -1183,7 +1201,7 @@ textarea.adm-field{resize:vertical;min-height:72px}
             <h3 class="adm-config-block-title">Quando disparar</h3>
             <p class="adm-config-block-desc">Escolha quais eventos enviam dados ao CRM.</p>
             <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
-              <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:300;cursor:pointer"><input type="checkbox" id="crm-ev-buy" style="accent-color:var(--folha);width:16px;height:16px"> Ao clicar em "Comprar via Stripe"</label>
+              <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:300;cursor:pointer"><input type="checkbox" id="crm-ev-buy" style="accent-color:var(--folha);width:16px;height:16px"> Ao clicar em "Comprar via Mercado Pago"</label>
               <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:300;cursor:pointer"><input type="checkbox" id="crm-ev-wpp" style="accent-color:var(--folha);width:16px;height:16px"> Ao clicar em "Pedir via WhatsApp"</label>
               <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:300;cursor:pointer"><input type="checkbox" id="crm-ev-cart" style="accent-color:var(--folha);width:16px;height:16px"> Ao fechar carrinho via WhatsApp</label>
             </div>
@@ -1249,7 +1267,7 @@ textarea.adm-field{resize:vertical;min-height:72px}
             <h3 class="adm-config-block-title">Payload enviado</h3>
             <p class="adm-config-block-desc">Estrutura JSON enviada a cada evento:</p>
             <pre style="background:var(--nevoa);border:1px solid var(--areia);padding:16px;font-size:11px;color:#5A5A50;line-height:1.7;overflow-x:auto;border-radius:2px;margin-top:8px">{
-  "event": "buy_stripe | wpp_order | cart_wpp",
+  "event": "buy_mercadopago | wpp_order | cart_wpp",
   "source": "Colhe &amp; Come Website",
   "timestamp": "2025-01-01T12:00:00Z",
   "customer_name": "...",
@@ -1262,10 +1280,10 @@ textarea.adm-field{resize:vertical;min-height:72px}
         </div>
       </div>
 
-      <!-- ─── STRIPE ─── -->
-      <div class="adm-pane" id="tab-stripe">
-        <h2 class="adm-section-title">Stripe — Pagamento Online</h2>
-        <p class="adm-section-sub">Configure os links de pagamento. Crie cada link em <strong>dashboard.stripe.com → Payment Links</strong> e cole abaixo.</p>
+      <!-- ─── MERCADOPAGO ─── -->
+      <div class="adm-pane" id="tab-mercadopago">
+        <h2 class="adm-section-title">Mercado Pago — Pagamento Online</h2>
+        <p class="adm-section-sub">Configure os links de pagamento. Crie cada link em <strong>dashboard.mercadopago.com → Payment Links</strong> e cole abaixo.</p>
         <div class="adm-config-grid">
           <div class="adm-config-block">
             <h3 class="adm-config-block-title">Link de checkout geral</h3>
@@ -1273,24 +1291,24 @@ textarea.adm-field{resize:vertical;min-height:72px}
             <div class="adm-config-fields">
               <div class="adm-config-full">
                 <label class="adm-label">URL do checkout geral</label>
-                <input class="adm-field" id="cfg-stripe-checkout" placeholder="https://buy.stripe.com/...">
+                <input class="adm-field" id="cfg-mercadopago-checkout" placeholder="https://buy.mercadopago.com/...">
               </div>
             </div>
-            <button class="adm-save-block" onclick="saveAdmSection('stripe')">Salvar</button>
+            <button class="adm-save-block" onclick="saveAdmSection('mercadopago')">Salvar</button>
           </div>
           <div class="adm-config-block">
             <h3 class="adm-config-block-title">Links por produto</h3>
-            <p class="adm-config-block-desc">Cada produto pode ter seu próprio Payment Link do Stripe. Edite o produto na aba <strong>Produtos</strong> para inserir o link individual.</p>
-            <div id="stripe-prod-list" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
+            <p class="adm-config-block-desc">Cada produto pode ter seu próprio Payment Link do Mercado Pago. Edite o produto na aba <strong>Produtos</strong> para inserir o link individual.</p>
+            <div id="mercadopago-prod-list" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
           </div>
           <div class="adm-config-block">
             <h3 class="adm-config-block-title">Como criar um Payment Link</h3>
             <p class="adm-config-block-desc">Passo a passo:</p>
             <ol style="margin-top:12px;display:flex;flex-direction:column;gap:10px;padding-left:16px">
-              <li style="font-size:13px;font-weight:300;color:#5A5A50;line-height:1.6">Acesse <strong style="color:var(--folha)">dashboard.stripe.com</strong> e faça login</li>
+              <li style="font-size:13px;font-weight:300;color:#5A5A50;line-height:1.6">Acesse <strong style="color:var(--folha)">dashboard.mercadopago.com</strong> e faça login</li>
               <li style="font-size:13px;font-weight:300;color:#5A5A50;line-height:1.6">Vá em <strong style="color:var(--folha)">Payment Links → + Novo link</strong></li>
               <li style="font-size:13px;font-weight:300;color:#5A5A50;line-height:1.6">Crie um produto com o nome e preço, clique em <strong style="color:var(--folha)">Criar link</strong></li>
-              <li style="font-size:13px;font-weight:300;color:#5A5A50;line-height:1.6">Copie a URL gerada (ex: https://buy.stripe.com/abc123) e cole no campo do produto</li>
+              <li style="font-size:13px;font-weight:300;color:#5A5A50;line-height:1.6">Copie a URL gerada (ex: https://buy.mercadopago.com/abc123) e cole no campo do produto</li>
               <li style="font-size:13px;font-weight:300;color:#5A5A50;line-height:1.6">Para receber via Pix ou boleto: em Configurações → Métodos de pagamento, habilite Brasil</li>
             </ol>
           </div>
@@ -1343,9 +1361,9 @@ textarea.adm-field{resize:vertical;min-height:72px}
         <input class="adm-field" id="pf-contents" placeholder="Cenoura, Batata Inglesa, Mandioquinha">
       </div>
       <div style="grid-column:span 2">
-        <label class="adm-label">Link de pagamento Stripe</label>
-        <input class="adm-field" id="pf-stripe" placeholder="https://buy.stripe.com/...">
-        <p class="adm-hint">Crie em dashboard.stripe.com → Payment Links</p>
+        <label class="adm-label">Link de pagamento Mercado Pago</label>
+        <input class="adm-field" id="pf-mercadopago" placeholder="https://buy.mercadopago.com/...">
+        <p class="adm-hint">Crie em dashboard.mercadopago.com → Payment Links</p>
       </div>
       <div style="grid-column:span 2">
         <label class="adm-label">Mensagem WhatsApp personalizada (opcional)</label>
@@ -2597,7 +2615,7 @@ function ppRenderRelated(p, cat) {
     '</div>';
   }).join('');
 }
-// ─── STRIPE CHECKOUT DINÂMICO ─────────────────────────────────────
+// ─── MERCADOPAGO CHECKOUT DINÂMICO ─────────────────────────────────────
 // ─── ANTES VS DEPOIS ──────────────────────────────────────────────
 var AVD_PRODUCTS = [
   { name:'Mandioca', waste:'30%', iconA:'🥔', iconB:'✨',
@@ -2694,7 +2712,7 @@ async function exportarSiteAtualizado(){
         return {
           id:p.id, name:p.name, price:p.price,
           weight:p.weight||'', desc:p.desc||'',
-          contents:p.contents||'', stripeLink:p.stripeLink||'',
+          contents:p.contents||'', mercadopagoLink:p.mercadopagoLink||'',
           wppMsg:p.wppMsg||'', active:p.active!==false,
           images:p.images||[], category:p.category||cat.id
         };
@@ -2742,7 +2760,7 @@ async function exportarSiteAtualizado(){
   }
 }
 
-async function finalizarStripe(){
+async function finalizarMercado Pago(){
   if(!cart.length){ showToast('Seu carrinho está vazio.'); return; }
   if(!freteCalc || !CART_FRETE_STATUS.calculado){
     if(CART_FRETE_STATUS.outside){
@@ -2771,7 +2789,7 @@ async function finalizarStripe(){
     return p ? { productId: p.id, qty: ci.qty } : null;
   }).filter(Boolean);
 
-  var btn = document.getElementById('btn-stripe-checkout');
+  var btn = document.getElementById('btn-mercadopago-checkout');
   var originalText = btn.innerHTML;
   btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Aguarde...';
   btn.style.opacity = '0.7';
@@ -2818,12 +2836,12 @@ async function finalizarStripe(){
         var p = getProduct(ci.id);
         return p ? (ci.qty + 'x ' + p.name) : '';
       }).filter(Boolean),
-      stripeSession: data.sessionId,
+      mercadopagoSession: data.sessionId,
       createdAt: new Date().toISOString()
     });
     setOrders(orders);
 
-    // Redireciona para o Stripe
+    // Redireciona para o Mercado Pago
     window.location.href = data.url;
 
   } catch(err){
@@ -2831,12 +2849,12 @@ async function finalizarStripe(){
     btn.style.opacity = '';
     btn.disabled = false;
     showToast('Erro: ' + err.message + ' — tente via WhatsApp.');
-    console.error('Stripe error:', err);
+    console.error('Mercado Pago error:', err);
   }
 }
 
-// Detecta retorno do Stripe (sucesso ou cancelamento)
-(function checkStripeReturn(){
+// Detecta retorno do Mercado Pago (sucesso ou cancelamento)
+(function checkMercado PagoReturn(){
   if(window.location.pathname === '/sucesso'){
     cart = []; saveCart(); updateBadge(); renderCart();
     history.replaceState({}, '', '/sucesso');
@@ -2870,7 +2888,7 @@ function showBanner(msg, type){
   setTimeout(function(){ banner.style.opacity='0'; banner.style.transition='opacity .5s'; setTimeout(function(){ banner.remove(); }, 500); }, 5000);
 }
 
-// ─── FIM STRIPE ───────────────────────────────────────────────────
+// ─── FIM MERCADOPAGO ───────────────────────────────────────────────────
 var pfImages = [];
 var activeCrmTab = 'webhook';
 
@@ -2883,7 +2901,7 @@ function getAdmConfigFull(){
     sobreTitle:'Nascemos da vontade de simplificar o que é saudável',
     sobreP1:'Sabemos que a vida agitada afasta as pessoas de uma alimentação de qualidade.',
     sobreP2:'Trabalhamos com produtores certificados e entregamos tudo cortado e pronto para usar.',
-    stripeCheckout:'',
+    mercadopagoCheckout:'',
     crmTab:'webhook', crmWebhookUrl:'',
     crmHsPortal:'', crmHsToken:'',
     crmRdToken:'',
@@ -2901,7 +2919,7 @@ function loadAdmConfigFull(){
   sv('cfg-wpp',c.wpp); sv('cfg-wpp-msg',c.wppMsg);
   sv('cfg-hero-eyebrow',c.heroEyebrow); sv('cfg-hero-title',c.heroTitle); sv('cfg-hero-desc',c.heroDesc);
   sv('cfg-sobre-title',c.sobreTitle); sv('cfg-sobre-p1',c.sobreP1); sv('cfg-sobre-p2',c.sobreP2);
-  sv('cfg-stripe-checkout',c.stripeCheckout);
+  sv('cfg-mercadopago-checkout',c.mercadopagoCheckout);
   sv('crm-webhook-url',c.crmWebhookUrl);
   sv('crm-hs-portal',c.crmHsPortal); sv('crm-hs-token',c.crmHsToken);
   sv('crm-rd-token',c.crmRdToken);
@@ -2909,7 +2927,7 @@ function loadAdmConfigFull(){
   var cm=document.getElementById('crm-custom-method'); if(cm) cm.value=c.crmCustomMethod||'POST';
   sc('crm-ev-buy',c.crmEvBuy!==false); sc('crm-ev-wpp',c.crmEvWpp!==false); sc('crm-ev-cart',c.crmEvCart!==false);
   setCrmTab(c.crmTab||'webhook',null);
-  renderStripeList();
+  renderMercado PagoList();
 }
 
 function saveAdmSection(section){
@@ -2919,7 +2937,7 @@ function saveAdmSection(section){
   if(section==='contato'){ c.wpp=gv('cfg-wpp'); c.wppMsg=gv('cfg-wpp-msg'); }
   else if(section==='hero'){ c.heroEyebrow=gv('cfg-hero-eyebrow'); c.heroTitle=gv('cfg-hero-title'); c.heroDesc=gv('cfg-hero-desc'); }
   else if(section==='sobre'){ c.sobreTitle=gv('cfg-sobre-title'); c.sobreP1=gv('cfg-sobre-p1'); c.sobreP2=gv('cfg-sobre-p2'); }
-  else if(section==='stripe'){ c.stripeCheckout=gv('cfg-stripe-checkout'); }
+  else if(section==='mercadopago'){ c.mercadopagoCheckout=gv('cfg-mercadopago-checkout'); }
   else if(section==='crm'){
     c.crmTab=activeCrmTab;
     c.crmWebhookUrl=gv('crm-webhook-url');
@@ -2975,8 +2993,8 @@ function testCrm(method){
   }
 }
 
-function renderStripeList(){
-  var el=document.getElementById('stripe-prod-list'); if(!el) return;
+function renderMercado PagoList(){
+  var el=document.getElementById('mercadopago-prod-list'); if(!el) return;
   el.innerHTML='';
   ALL_PRODUCTS.forEach(function(p){
     var div=document.createElement('div');
@@ -2986,16 +3004,16 @@ function renderStripeList(){
         '<p style="font-family:var(--serif);font-size:14px;font-weight:400;color:var(--floresta);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.name+'</p>'+
         '<p style="font-size:11px;color:#9B9B8E">R$ '+p.price.toFixed(2).replace('.',',')+'</p>'+
       '</div>'+
-      '<input class="adm-field" id="sl-'+p.id+'" style="width:200px;font-size:12px;padding:7px 10px" placeholder="https://buy.stripe.com/..." value="'+(p.stripeLink||'')+'" onchange="saveStripeLink(\''+p.id+'\',this.value)">';
+      '<input class="adm-field" id="sl-'+p.id+'" style="width:200px;font-size:12px;padding:7px 10px" placeholder="https://buy.mercadopago.com/..." value="'+(p.mercadopagoLink||'')+'" onchange="saveMercado PagoLink(\''+p.id+'\',this.value)">';
     el.appendChild(div);
   });
 }
 
-function saveStripeLink(pid,url){
-  ALL_PRODUCTS.forEach(function(p){ if(p.id===pid) p.stripeLink=url.trim(); });
-  CATEGORIES.forEach(function(cat){ cat.products.forEach(function(p){ if(p.id===pid) p.stripeLink=url.trim(); }); });
-  saveProdOverride(pid,{stripeLink:url.trim()});
-  showToast('Link Stripe salvo!');
+function saveMercado PagoLink(pid,url){
+  ALL_PRODUCTS.forEach(function(p){ if(p.id===pid) p.mercadopagoLink=url.trim(); });
+  CATEGORIES.forEach(function(cat){ cat.products.forEach(function(p){ if(p.id===pid) p.mercadopagoLink=url.trim(); }); });
+  saveProdOverride(pid,{mercadopagoLink:url.trim()});
+  showToast('Link Mercado Pago salvo!');
 }
 
 function applyProdOverrides(){
@@ -3045,7 +3063,7 @@ function renderAdmProducts(filterCat){
       '<div style="flex:1;min-width:0">'+
         '<p style="font-family:var(--serif);font-size:15px;font-weight:400;color:var(--floresta)">'+p.name+'</p>'+
         '<p style="font-size:11px;color:#9B9B8E;margin-top:2px">'+item.catLabel+' · R$ '+p.price.toFixed(2).replace('.',',')+(p.weight?' · '+p.weight:'')+
-        (p.stripeLink?' · <span style="color:#16A34A">Stripe ✓</span>':' · <span style="color:#E24B4A">sem Stripe</span>')+
+        (p.mercadopagoLink?' · <span style="color:#16A34A">Mercado Pago ✓</span>':' · <span style="color:#E24B4A">sem Mercado Pago</span>')+
         ((p.images&&p.images.length)?' · '+p.images.length+' foto(s)':' · sem fotos')+'</p>'+
       '</div>'+
       '<div style="display:flex;gap:8px;flex-shrink:0">'+
@@ -3077,12 +3095,12 @@ function openProdForm(pid){
     document.getElementById('pf-weight').value=p.weight||'';
     document.getElementById('pf-desc').value=p.desc||'';
     document.getElementById('pf-contents').value=p.contents||'';
-    document.getElementById('pf-stripe').value=p.stripeLink||'';
+    document.getElementById('pf-mercadopago').value=p.mercadopagoLink||'';
     document.getElementById('pf-wpp').value=p.wppMsg||'';
     document.getElementById('pf-active').checked=p.active!==false;
     pfImages=(p.images||[]).slice();
   } else {
-    ['pf-name','pf-price','pf-weight','pf-desc','pf-contents','pf-stripe','pf-wpp'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    ['pf-name','pf-price','pf-weight','pf-desc','pf-contents','pf-mercadopago','pf-wpp'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
     var ac=document.getElementById('pf-active'); if(ac) ac.checked=true;
   }
   pfRenderPreviews();
@@ -3101,7 +3119,7 @@ function saveProdForm(){
   if(isNaN(price)||price<=0){ showToast('Digite um preço válido.'); return; }
   var pid=document.getElementById('pf-id').value;
   var cat=document.getElementById('pf-cat').value;
-  var data={name:name,price:price,weight:document.getElementById('pf-weight').value.trim(),desc:document.getElementById('pf-desc').value.trim(),contents:document.getElementById('pf-contents').value.trim(),stripeLink:document.getElementById('pf-stripe').value.trim(),wppMsg:document.getElementById('pf-wpp').value.trim(),active:document.getElementById('pf-active').checked,images:pfImages.slice()};
+  var data={name:name,price:price,weight:document.getElementById('pf-weight').value.trim(),desc:document.getElementById('pf-desc').value.trim(),contents:document.getElementById('pf-contents').value.trim(),mercadopagoLink:document.getElementById('pf-mercadopago').value.trim(),wppMsg:document.getElementById('pf-wpp').value.trim(),active:document.getElementById('pf-active').checked,images:pfImages.slice()};
   if(pid){
     var p=ALL_PRODUCTS.find(function(x){ return x.id===pid; }); if(p) Object.assign(p,data);
     CATEGORIES.forEach(function(c){ var cp=c.products.find(function(x){ return x.id===pid; }); if(cp) Object.assign(cp,data); });
@@ -3113,7 +3131,7 @@ function saveProdForm(){
     var co=CATEGORIES.find(function(c){ return c.id===cat; }); if(co) co.products.push(np);
     saveProdOverride(newId,np);
   }
-  renderCategories(); renderAdmProducts(); renderStripeList();
+  renderCategories(); renderAdmProducts(); renderMercado PagoList();
   closeProdForm(); showToast('Produto salvo!');
 }
 
@@ -3141,7 +3159,7 @@ var _origShowAdmMain=showAdmMain;
 showAdmMain=function(){
   document.getElementById('adm-login').style.display='none';
   document.getElementById('adm-main').classList.add('open');
-  loadAdmConfigFull(); renderStats(); renderOrders(); renderAdmProducts(); renderStripeList();
+  loadAdmConfigFull(); renderStats(); renderOrders(); renderAdmProducts(); renderMercado PagoList();
 };
 
 // patch showAdmTab
@@ -3153,7 +3171,7 @@ showAdmTab=function(id){
   document.querySelectorAll('.adm-tab').forEach(function(t){ if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'"+id+"'")>-1) t.classList.add('active'); });
   if(id==='tab-pedidos'){ renderStats(); renderOrders(); }
   if(id==='tab-produtos'){ renderAdmProducts(); }
-  if(id==='tab-stripe'){ renderStripeList(); }
+  if(id==='tab-mercadopago'){ renderMercado PagoList(); }
 };
 
 applyProdOverrides();
