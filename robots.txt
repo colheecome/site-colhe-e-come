@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-
-# Sitemaps ajudam o Google a encontrar suas páginas mais rápido
-Sitemap: https://colhecome.netlify.app/sitemap.xml
