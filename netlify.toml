@@ -8,7 +8,7 @@
 # Rota de sucesso (SPA-style): serve index.html para mensagens pos-checkout
 [[redirects]]
   from = "/sucesso"
-  to = "/index.html"
+  to = "/sucesso.html"
   status = 200
 
 [[headers]]
