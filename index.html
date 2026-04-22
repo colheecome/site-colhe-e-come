@@ -944,14 +944,9 @@ textarea.adm-field{resize:vertical;min-height:72px}
               <input class="co-field" id="co-tel" placeholder="(11) 99999-9999" autocomplete="tel" oninput="maskTel(this)">
             </div>
             <div>
-              <label class="co-label">Horário preferido de entrega</label>
-              <div class="horario-grid" id="horario-grid">
-                <div class="horario-opt" onclick="selectHorario(this,'08h–12h')">08h – 12h</div>
-                <div class="horario-opt" onclick="selectHorario(this,'12h–17h')">12h – 17h</div>
-                <div class="horario-opt" onclick="selectHorario(this,'17h–20h')">17h – 20h</div>
-              </div>
-              <input type="hidden" id="co-horario">
-              <p style="font-size:11px;font-weight:300;color:#9B9B8E;margin-top:8px;line-height:1.5">🕐 Entrega em até 48 horas após a confirmação do pedido. O horário selecionado é uma preferência — confirmaremos a janela exata pelo WhatsApp.</p>
+              <p style="font-size:13px;font-weight:400;color:var(--folha);margin-bottom:4px">🕐 Horário de entrega: <strong>08h às 20h</strong></p>
+              <p style="font-size:11px;font-weight:300;color:#9B9B8E;line-height:1.5">Entrega em até 48 horas após a confirmação do pedido. Confirmaremos o horário exato pelo WhatsApp.</p>
+              <input type="hidden" id="co-horario" value="08h–20h">
             </div>
           </div>
         </div>
@@ -1033,7 +1028,7 @@ textarea.adm-field{resize:vertical;min-height:72px}
         <div class="co-nav">
           <button class="btn-co-back" onclick="goStep(2)">← Voltar</button>
           <div style="display:flex;flex-direction:column;gap:10px;flex:1">
-            <button class="btn-co-next" id="btn-stripe-checkout" onclick="finalizarStripe()" style="display:flex;align-items:center;justify-content:center;gap:10px">
+            <button class="btn-co-next" id="btn-infinitepay-checkout" onclick="finalizarInfinitePay()" style="display:flex;align-items:center;justify-content:center;gap:10px">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
               Finalizar pagamento
             </button>
@@ -1478,6 +1473,28 @@ textarea.adm-field{resize:vertical;min-height:72px}
 
 <!-- ══════════ JAVASCRIPT ══════════ -->
 <script>
+// ─── SUPABASE CONFIG ─────────────────────────────────────────────
+// Preencha com suas chaves públicas (Project Settings → API no Supabase)
+var SUPABASE_URL      = 'https://ebtxiyijhqccciljwuhu.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVidHhpeWlqaHFjY2NpbGp3dWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NzU5NTgsImV4cCI6MjA5MDU1MTk1OH0.VzZEfi6tETojasnGQur6UvsQaf7NkKK9ECY_NQiCkQ4';
+
+// Helper REST sem CDN — usa fetch nativo
+async function sbFetch(endpoint, params) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  var qs = params ? '?' + new URLSearchParams(params).toString() : '';
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/' + endpoint + qs, {
+      headers: {
+        'apikey':        SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Accept':        'application/json'
+      }
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch(e) { return null; }
+}
+
 // ─── CENTROS DE DISTRIBUIÇÃO (ocultos do cliente) ───────────────
 var ORIGINS = [
   { lat:-23.6243, lng:-46.7450 }, // Vila Suzana (Rua Domingos Ataíde)
@@ -1526,7 +1543,11 @@ var SUBSCRIPTION_FRETE = { cep:'', valor:0, distancia:0, calculado:false, outsid
 var CART_FRETE_STATUS = { calculado:false, outside:false };
 
 // ─── PRODUTOS ────────────────────────────────────────────────────
-/*CC_CATS_START*/var CATEGORIES = [
+// CATEGORIES começa vazio — preenchido por loadVitrineFromSupabase()
+// O conteúdo estático serve como fallback quando Supabase está indisponível
+var CATEGORIES = [];
+
+/*CC_CATS_START*/var FALLBACK_CATEGORIES = [
   { id:'raizes', label:'Raízes e Tubérculos', sub:'Média 500g por embalagem', products:[
     {id:'r1',name:'Batata Inglesa',price:3.50,weight:'500g',desc:'Descascada e cortada em cubos, pronta para refogar, cozinhar ou assar.',images:['assets/products/r1.webp']},
     {id:'r2',name:'Batata Doce',price:3.90,weight:'500g',desc:'Cortada em rodelas ou cubos. Rica em fibras e adocicada naturalmente.',images:['assets/products/r2.webp']},
@@ -1578,11 +1599,56 @@ var CART_FRETE_STATUS = { calculado:false, outside:false };
   ]}
 ];/*CC_CATS_END*/
 
-// Flatten para busca rápida
+// Flatten para busca rápida (preenchido pelo loader)
 var ALL_PRODUCTS = [];
-CATEGORIES.forEach(function(c){ c.products.forEach(function(p){ p.category=c.id; ALL_PRODUCTS.push(p); }); });
 
 function getProduct(id){ return ALL_PRODUCTS.find(function(p){ return p.id===id; }); }
+
+// ─── VITRINE DINÂMICA (Supabase) ─────────────────────────────────
+async function loadVitrineFromSupabase() {
+  var cats  = await sbFetch('categories', { 'is_active': 'eq.true', 'order': 'sort_order.asc,name.asc', 'select': 'id,name' });
+  var prods = await sbFetch('products',   { 'is_active': 'eq.true', 'order': 'sort_order.asc,name.asc', 'select': 'id,category_id,name,description,weight,price_in_cents,image_url' });
+
+  if (!cats || !cats.length || !prods) {
+    // Fallback para dados estáticos
+    CATEGORIES = FALLBACK_CATEGORIES;
+    ALL_PRODUCTS = [];
+    CATEGORIES.forEach(function(c){ c.products.forEach(function(p){ p.category = c.id; ALL_PRODUCTS.push(p); }); });
+    renderCategories();
+    return;
+  }
+
+  // Agrupa produtos por categoria
+  CATEGORIES = cats.map(function(cat) {
+    var catProds = prods
+      .filter(function(p) { return p.category_id === cat.id; })
+      .map(function(p) {
+        return {
+          id:             p.id,   // UUID do Supabase
+          name:           p.name,
+          price:          p.price_in_cents / 100,
+          price_in_cents: p.price_in_cents,
+          weight:         p.weight || '',
+          desc:           p.description || '',
+          images:         p.image_url ? [p.image_url] : [],
+          category:       cat.id
+        };
+      });
+    return {
+      id:       cat.id,
+      label:    cat.name,
+      sub:      '',
+      products: catProds
+    };
+  }).filter(function(cat) { return cat.products.length > 0; });
+
+  ALL_PRODUCTS = [];
+  CATEGORIES.forEach(function(c) { c.products.forEach(function(p) { ALL_PRODUCTS.push(p); }); });
+
+  renderCategories();
+  updateBadge(); // re-valida badge do carrinho
+  renderCart();  // re-renderiza caso tenha itens salvos
+}
 
 // ─── CARRINHO ────────────────────────────────────────────────────
 var cart = [];
@@ -1735,7 +1801,7 @@ function goStep(n){
     var tel=document.getElementById('co-tel').value.trim();
     if(!nome){ showToast('Informe seu nome.'); return; }
     if(!tel){ showToast('Informe seu WhatsApp/telefone.'); return; }
-    if(!selectedHorario){ showToast('Selecione um horário de entrega.'); return; }
+    selectedHorario = '08h–20h';
   }
   if(n===3){
     var end=document.getElementById('co-endereco').value.trim();
@@ -2742,7 +2808,7 @@ async function exportarSiteAtualizado(){
   }
 }
 
-async function finalizarStripe(){
+async function finalizarInfinitePay(){
   if(!cart.length){ showToast('Seu carrinho está vazio.'); return; }
   if(!freteCalc || !CART_FRETE_STATUS.calculado){
     if(CART_FRETE_STATUS.outside){
@@ -2771,11 +2837,9 @@ async function finalizarStripe(){
     return p ? { productId: p.id, qty: ci.qty } : null;
   }).filter(Boolean);
 
-  var btn = document.getElementById('btn-stripe-checkout');
-  var originalText = btn.innerHTML;
-  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Aguarde...';
-  btn.style.opacity = '0.7';
-  btn.disabled = true;
+  var btn = document.getElementById('btn-infinitepay-checkout');
+  var originalText = btn ? btn.innerHTML : '';
+  if(btn){ btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Aguarde...'; btn.style.opacity='0.7'; btn.disabled=true; }
 
   try {
     var response = await fetch('/.netlify/functions/create-checkout', {
@@ -2785,13 +2849,17 @@ async function finalizarStripe(){
         items: items,
         frete: freteVal || 0,
         customerInfo: {
-          nome: nome,
-          tel: tel,
-          email: '',
-          endereco: endCompleto,
-          horario: horario,
-          referencia: ref,
-          cep: document.getElementById('co-cep').value.trim()
+          nome:        nome,
+          tel:         tel,
+          email:       '',
+          endereco:    end,
+          numero:      num,
+          complemento: comp,
+          bairro:      bairro,
+          cidade:      cidade,
+          horario:     horario,
+          referencia:  ref,
+          cep:         document.getElementById('co-cep').value.trim()
         }
       })
     });
@@ -2799,7 +2867,7 @@ async function finalizarStripe(){
     var data = await response.json();
 
     if(!response.ok || !data.url){
-      throw new Error(data.error || 'Erro ao criar sessão de pagamento.');
+      throw new Error(data.error || 'Erro ao criar link de pagamento.');
     }
 
     // Salva pedido como "aguardando pagamento" antes de redirecionar
@@ -2823,15 +2891,13 @@ async function finalizarStripe(){
     });
     setOrders(orders);
 
-    // Redireciona para o Stripe
+    // Redireciona para o checkout InfinitePay
     window.location.href = data.url;
 
   } catch(err){
-    btn.innerHTML = originalText;
-    btn.style.opacity = '';
-    btn.disabled = false;
+    if(btn){ btn.innerHTML = originalText; btn.style.opacity=''; btn.disabled=false; }
     showToast('Erro: ' + err.message + ' — tente via WhatsApp.');
-    console.error('Stripe error:', err);
+    console.error('InfinitePay checkout error:', err);
   }
 }
 
@@ -3205,7 +3271,16 @@ function initReveals(){
 
 // ─── INIT ─────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',function(){
-  renderCategories();
+  // Mostra loading no catálogo enquanto busca do Supabase
+  var catSections = document.getElementById('cat-sections');
+  var catTabs     = document.getElementById('cat-tabs');
+  if(catSections) catSections.innerHTML = '<p style="text-align:center;padding:60px 20px;font-size:14px;font-weight:300;color:#9B9B8E">Carregando catálogo...</p>';
+
+  // Carrega vitrine do Supabase (ou fallback estático)
+  loadVitrineFromSupabase().then(function(){
+    initReveals(); // inicia reveals após o DOM ser populado
+  });
+
   renderCart();
   updateBadge();
   avdSetProduct(0, document.querySelector('.avd-prod-btn'));
