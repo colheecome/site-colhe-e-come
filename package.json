@@ -2,5 +2,7 @@
   "name": "colhe-e-come",
   "version": "1.0.0",
   "description": "Colhe & Come — Site e funções Netlify",
-  "dependencies": {}
+  "devDependencies": {
+    "netlify-cli": "^25.2.0"
+  }
 }
